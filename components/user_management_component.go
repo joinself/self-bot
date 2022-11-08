@@ -1,15 +1,21 @@
 package components
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"log"
+
 	"github.com/joinself/self-go-sdk/chat"
 )
 
 type UserManagementComponent struct {
-	admins map[string]struct{}
+	admins    map[string]struct{}
+	storeFile string
 }
 
 type UserManagementComponentConfig struct {
-	Admins []string
+	Admins    []string
+	StoreFile string
 }
 
 func NewUserManagementComponent(cfg UserManagementComponentConfig) *UserManagementComponent {
@@ -18,9 +24,13 @@ func NewUserManagementComponent(cfg UserManagementComponentConfig) *UserManageme
 		admins[v] = struct{}{}
 	}
 
-	return &UserManagementComponent{
-		admins: admins,
+	um := UserManagementComponent{
+		admins:    admins,
+		storeFile: cfg.StoreFile,
 	}
+	um.recover()
+
+	return &um
 }
 
 func (u *UserManagementComponent) RecordCommands(r CommandRecorder) {
@@ -57,6 +67,7 @@ func (u *UserManagementComponent) recordAddUserCommand(r CommandRecorder) {
 				return "You must provide the self identifier of the user you want to add"
 			}
 			u.admins[params[0]] = struct{}{}
+			u.save()
 
 			return "@" + params[0] + " has been successfully <b>added</b> to the list of admins"
 		},
@@ -73,10 +84,47 @@ func (u *UserManagementComponent) recordRemoveUserCommand(r CommandRecorder) {
 				return "You must provide the self identifier of the user you want to remove"
 			}
 			delete(u.admins, params[0])
+			u.save()
 
 			return "@" + params[0] + " has been successfully <b>removed</b> to the list of admins"
 		},
 	})
+}
+
+func (u *UserManagementComponent) save() {
+	if len(u.storeFile) == 0 {
+		log.Println("store file not found")
+		return
+	}
+
+	content, err := json.Marshal(u.admins)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	err = ioutil.WriteFile(u.storeFile, content, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (u *UserManagementComponent) recover() {
+	if len(u.storeFile) == 0 {
+		log.Println("store file not found")
+		return
+	}
+
+	content, err := ioutil.ReadFile(u.storeFile)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = json.Unmarshal(content, &u.admins)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }
 
 func (u *UserManagementComponent) auth(issuer, cmd string) bool {
@@ -88,6 +136,5 @@ func (u *UserManagementComponent) auth(issuer, cmd string) bool {
 		return true
 	}
 	//TODO: implement per command auth
-	println("authorising")
 	return true
 }

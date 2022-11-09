@@ -12,7 +12,6 @@ b := bot.NewSelfBot(bot.SelfBotConfig{
     Components: []components.CommandComponent{
         components.NewUserManagementComponent(components.UserManagementComponentConfig{
             Admins:    []string{"111222333"},
-            StoreFile: "/tmp/users.json",
         }),
         components.NewHelpComponent(components.HelpComponentConfig{
             Header: "This bot allows you add users to the self sign up incentive program, see below the list of available commands",

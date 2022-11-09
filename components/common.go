@@ -36,3 +36,8 @@ func GetCommandParams(body string) []string {
 
 	return words[1:]
 }
+
+type Store interface {
+	Set(key string, value []byte) error
+	Get(key string) ([]byte, error)
+}

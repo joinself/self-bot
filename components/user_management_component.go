@@ -2,20 +2,22 @@ package components
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 
 	"github.com/joinself/self-go-sdk/chat"
 )
 
 type UserManagementComponent struct {
-	admins    map[string]struct{}
-	storeFile string
+	admins        map[string]struct{}
+	storeFile     string
+	store         Store
+	componentName string
 }
 
 type UserManagementComponentConfig struct {
 	Admins    []string
 	StoreFile string
+	Store     Store
 }
 
 func NewUserManagementComponent(cfg UserManagementComponentConfig) *UserManagementComponent {
@@ -25,10 +27,12 @@ func NewUserManagementComponent(cfg UserManagementComponentConfig) *UserManageme
 	}
 
 	um := UserManagementComponent{
-		admins:    admins,
-		storeFile: cfg.StoreFile,
+		admins:        admins,
+		storeFile:     cfg.StoreFile,
+		store:         cfg.Store,
+		componentName: "user_management_component",
 	}
-	um.recover()
+	um.load()
 
 	return &um
 }
@@ -92,8 +96,7 @@ func (u *UserManagementComponent) recordRemoveUserCommand(r CommandRecorder) {
 }
 
 func (u *UserManagementComponent) save() {
-	if len(u.storeFile) == 0 {
-		log.Println("store file not found")
+	if u.store == nil {
 		return
 	}
 
@@ -103,19 +106,15 @@ func (u *UserManagementComponent) save() {
 		return
 	}
 
-	err = ioutil.WriteFile(u.storeFile, content, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
+	u.store.Set(u.componentName, content)
 }
 
-func (u *UserManagementComponent) recover() {
-	if len(u.storeFile) == 0 {
-		log.Println("store file not found")
+func (u *UserManagementComponent) load() {
+	if u.store == nil {
 		return
 	}
 
-	content, err := ioutil.ReadFile(u.storeFile)
+	content, err := u.store.Get(u.componentName)
 	if err != nil {
 		log.Println(err)
 		return

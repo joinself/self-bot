@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
+	"time"
 
 	selfsdk "github.com/joinself/self-go-sdk"
+	"github.com/joinself/self-go-sdk/chat"
 )
 
 type WelcomeComponent struct {
@@ -37,6 +39,7 @@ func NewWelcomeComponent(cfg WelcomeComponentConfig) *WelcomeComponent {
 }
 
 func (i *WelcomeComponent) RecordCommands(r CommandRecorder) {
+	i.recordGetConnections(r)
 	return
 }
 
@@ -58,6 +61,30 @@ func (i *WelcomeComponent) AfterStartHook(r CommandRecorder) {
 		if body != "" {
 			i.client.ChatService().Message([]string{iss}, body)
 		}
+	})
+}
+
+func (i *WelcomeComponent) recordGetConnections(r CommandRecorder) {
+	r.RecordCommand(Command{
+		Name:    "get_connections",
+		Summary: "Returns a csv file with the list of connected users.",
+		Callback: func(cmd string, cm *chat.Message) string {
+			resp := "Find attached a list of objects"
+			content := strings.Join(i.connections, "\n")
+
+			objects := make([]chat.MessageObject, 0)
+			objects = append(objects, chat.MessageObject{
+				Name: "connections_new_" + time.Now().String() + ".csv",
+				Data: []byte(content),
+				Mime: "text/csv",
+			})
+
+			cm.Message(resp, chat.MessageOptions{
+				Objects: objects,
+			})
+
+			return ""
+		},
 	})
 }
 
